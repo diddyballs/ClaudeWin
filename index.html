@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+  <html lang="en">
+  <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Coinbase Trade Dashboard</title>
+      <script src="https://cdn.tailwindcss.com"></script>
+      <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+      <style>
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap');
+          body {
+              font-family: 'Inter', sans-serif;
+              background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+          }
+          .card {
+              background: linear-gradient(145deg, #1e293b, #334155);
+              border: 1px solid #475569;
+              transition: all 0.3s ease;
+          }
+          .card:hover {
+              transform: scale(1.02);
+              box-shadow: 0 15px 35px -5px rgba(59, 130, 246, 0.3);
+              border-color: #3b82f6;
+          }
+          .buy { background-color: rgba(74, 222, 128, 0.2); border-left: 4px solid #4ade80; }
+          .sell { background-color: rgba(248, 113, 113, 0.2); border-left: 4px solid #f87171; }
+          .hold { background-color: rgba(148, 163, 184, 0.2); border-left: 4px solid #94a3b8; }
+          .strong-buy { background-color: rgba(59, 130, 246, 0.2); border-left: 4px solid #3b82f6; }
+      </style>
+  </head>
+  <body class="bg-gray-950 text-white min-h-screen">
+      <nav class="border-b border-gray-800 p-6 backdrop-blur bg-gray-950/50 sticky top-0 z-50">
+          <div class="max-w-7xl mx-auto flex justify-between items-center">
+              <h1 class="text-2xl font-black text-blue-400">Coinbase Trade Dashboard</h1>
+              <div class="flex items-center space-x-4">
+                  <div id="account-balance" class="text-lg font-semibold"></div>
+                  <button id="refresh-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg
+  transition">
+                      Refresh Data
+                  </button>
+              </div>
+          </div>
+      </nav>
+
+      <div class="max-w-7xl mx-auto px-6 py-12">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+              <!-- Portfolio Summary -->
+              <div class="card rounded-2xl p-6">
+                  <h3 class="text-xl font-bold mb-6 text-blue-400">📊 Portfolio Summary</h3>
+                  <div class="space-y-4">
+                      <div class="flex justify-between items-center">
+                          <span class="text-gray-400">Total Value</span>
+                          <span id="total-value" class="text-2xl font-bold text-white">$0.00</span>
+                      </div>
+                      <div class="flex justify-between items-center">
+                          <span class="text-gray-400">24h Change</span>
+                          <span id="daily-change" class="text-lg font-semibold"></span>
+                      </div>
+                      <div class="w-full bg-gray-700 rounded-full h-2.5">
+                          <div id="portfolio-progress" class="bg-blue-500 h-2.5 rounded-full" style="width: 0%"></div>
+                      </div>
+                  </div>
+              </div>
+
+              <!-- Market Data -->
+              <div class="card rounded-2xl p-6">
+                  <h3 class="text-xl font-bold mb-6 text-green-400">📈 Market Data</h3>
+                  <div class="space-y-4">
+                      <div class="flex justify-between items-center">
+                          <span class="text-gray-400">BTC Price</span>
+                          <span id="btc-price" class="text-lg font-semibold"></span>
+                      </div>
+                      <div class="flex justify-between items-center">
+                          <span class="text-gray-400">ETH Price</span>
+                          <span id="eth-price" class="text-lg font-semibold"></span>
+                      </div>
+                      <div class="flex justify-between items-center">
+                          <span class="text-gray-400">Market Cap</span>
+                          <span id="market-cap" class="text-lg font-semibold"></span>
+                      </div>
+                      <canvas id="price-chart" height="150"></canvas>
+                  </div>
+              </div>
+
+              <!-- AI Recommendations -->
+              <div class="card rounded-2xl p-6">
+                  <h3 class="text-xl font-bold mb-6 text-purple-400">🤖 AI Recommendations</h3>
+                  <div id="ai-recommendations" class="space-y-3">
+                      <div class="text-center text-gray-400 py-4">Loading recommendations...</div>
+                  </div>
+              </div>
+          </div>
+
+          <!-- Trade Execution -->
+          <div class="card rounded-2xl p-8 mb-12">
+              <h3 class="text-xl font-bold mb-6 text-yellow-400">🚀 Trade Execution</h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div>
+                      <div class="mb-6">
+                          <label class="block text-sm font-medium text-gray-400 mb-2">Select Asset</label>
+                          <select id="trade-asset" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-3
+  focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                              <option value="BTC-USD">Bitcoin (BTC)</option>
+                              <option value="ETH-USD">Ethereum (ETH)</option>
+                              <option value="SOL-USD">Solana (SOL)</option>
+                              <option value="ADA-USD">Cardano (ADA)</option>
+                          </select>
+                      </div>
+
+                      <div class="mb-6">
+                          <label class="block text-sm font-medium text-gray-400 mb-2">Amount</label>
+                          <input type="number" id="trade-amount" class="w-full bg-gray-800 border border-gray-700
+  rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="0.00">
+                      </div>
+
+                      <div class="flex space-x-4">
+                          <button id="buy-btn" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3
+  px-6 rounded-lg transition">
+                              Buy
+                          </button>
+                          <button id="sell-btn" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6
+  rounded-lg transition">
+                              Sell
+                          </button>
+                      </div>
+                  </div>
+
+                  <div>
+                      <div class="bg-gray-800 rounded-lg p-6 h-full">
+                          <h4 class="text-lg font-semibold mb-4">Order Preview</h4>
+                          <div class="space-y-3">
+                              <div class="flex justify-between">
+                                  <span class="text-gray-400">Asset</span>
+                                  <span id="preview-asset">BTC-USD</span>
+                              </div>
+                              <div class="flex justify-between">
+                                  <span class="text-gray-400">Action</span>
+                                  <span id="preview-action" class="font-semibold">BUY</span>
+                              </div>
+                              <div class="flex justify-between">
+                                  <span class="text-gray-400">Amount</span>
+                                  <span id="preview-amount">0.00</span>
+                              </div>
+                              <div class="flex justify-between">
+                                  <span class="text-gray-400">Estimated Price</span>
+                                  <span id="preview-price">$0.00</span>
+                              </div>
+                              <div class="flex justify-between">
+                                  <span class="text-gray-400">Total</span>
+                                  <span id="preview-total" class="text-xl font-bold">$0.00</span>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          </div>
+
+          <!-- Trade History -->
+          <div class="card rounded-2xl p-8">
+              <h3 class="text-xl font-bold mb-6 text-blue-400">📜 Trade History</h3>
+              <div class="overflow-x-auto">
+                  <table class="min-w-full divide-y divide-gray-700">
+                      <thead>
+                          <tr>
+                              <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase
+  tracking-wider">Date</th>
+                              <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase
+  tracking-wider">Asset</th>
+                              <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase
+  tracking-wider">Action</th>
+                              <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase
+  tracking-wider">Amount</th>
+                              <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase
+  tracking-wider">Price</th>
+                              <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase
+  tracking-wider">Status</th>
+                          </tr>
+                      </thead>
+                      <tbody id="trade-history" class="divide-y divide-gray-700">
+                          <!-- Trade history will be populated here -->
+                      </tbody>
+                  </table>
+              </div>
+          </div>
+      </div>
+
+      <script>
+          // Coinbase API Configuration
+          const COINBASE_API_KEY = 'YOUR_API_KEY';
+          const COINBASE_API_SECRET = 'YOUR_API_SECRET';
+          const COINBASE_API_URL = 'https://api.coinbase.com/v2';
+
+          // Chart.js Configuration
+          let priceChart;
+
+          // Initialize the dashboard
+          document.addEventListener('DOMContentLoaded', function() {
+              initializeChart();
+              loadAccountData();
+              loadMarketData();
+              loadAIRecommendations();
+              setupEventListeners();
+          });
+
+          function initializeChart() {
+              const ctx = document.getElementById('price-chart').getContext('2d');
+              priceChart = new Chart(ctx, {
+                  type: 'line',
+                  data: {
+                      labels: [],
+                      datasets: [{
+                          label: 'BTC Price',
+                          data: [],
+                          borderColor: '#3b82f6',
+                          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                          tension: 0.4,
+                          fill: true
+                      }]
+                  },
+                  options: {
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      scales: {
+                          y: {
+                              beginAtZero: false,
+                              grid: {
+                                  color: 'rgba(75, 85, 99, 0.3)'
+                              }
+                          },
+                          x: {
+                              grid: {
+                                  color: 'rgba(75, 85, 99, 0.3)'
+                              }
+                          }
+                      },
+                      plugins: {
+                          legend: {
+                              display: false
+                          }
+                      }
+                  }
+              });
+          }
+
+          async function loadAccountData() {
+              try {
+                  const response = await fetch(`${COINBASE_API_URL}/accounts`, {
+                      headers: {
+                          'CB-ACCESS-KEY': COINBASE_API_KEY,
+                          'CB-ACCESS-SIGN': generateSignature('GET', '/v2/accounts'),
+                          'CB-ACCESS-TIMESTAMP': Math.floor(Date.now() / 1000).toString()
+                      }
+                  });
+
+                  if (!response.ok) throw new Error('Failed to fetch account data');
+
+                  const data = await response.json();
+                  const btcAccount = data.data.find(acc => acc.currency === 'BTC');
+                  const usdAccount = data.data.find(acc => acc.currency === 'USD');
+
+                  document.getElementById('account-balance').textContent =
+  `$${parseFloat(usdAccount.balance.amount).toFixed(2)}`;
+                  document.getElementById('total-value').textContent =
+  `$${parseFloat(usdAccount.balance.amount).toFixed(2)}`;
+
+                  // Calculate 24h change (mock data for demo)
+                  const change = (Math.random() * 10 - 5).toFixed(2);
+                  const changeElement = document.getElementById('daily-change');
+                  changeElement.textContent = `${change > 0 ? '+' : ''}${change}%`;
+                  changeElement.className = change > 0 ? 'text-green-400' : 'text-red-400';
+
+                  // Update portfolio progress bar
+                  const totalValue = parseFloat(usdAccount.balance.amount);
+                  const progress = Math.min(100, (totalValue / 10000) * 100); // Assuming $10,000 target
+                  document.getElementById('portfolio-progress').style.width = `${progress}%`;
+
+              } catch (error) {
+                  console.error('Error loading account data:', error);
+                  document.getElementById('account-balance').textContent = 'Error loading data';
+              }
+          }
+
+          async function loadMarketData() {
+              try {
+                  // Fetch BTC price
+                  const btcResponse = await fetch('https://api.coinbase.com/v2/prices/BTC-USD/spot');
+                  const btcData = await btcResponse.json();
+                  const btcPrice = parseFloat(btcData.data.amount);
+                  document.getElementById('btc-price').textContent = `$${btcPrice.toFixed(2)}`;
+
+                  // Fetch ETH price
+                  const ethResponse = await fetch('https://api.coinbase.com/v2/prices/ETH-USD/spot');
+                  const ethData = await ethResponse.json();
+                  const ethPrice = parseFloat(ethData.data.amount);
+                  document.getElementById('eth-price').textContent = `$${ethPrice.toFixed(2)}`;
+
+                  // Fetch market cap (mock data for demo)
+                  const marketCap = Math.floor(Math.random() * 1000000000000) + 500000000000;
+                  document.getElementById('market-cap').textContent = `$${(marketCap / 1000000000).toFixed(2)}B`;
+
+                  // Update chart with mock historical data
+                  const labels = [];
+                  const data = [];
+                  const now = new Date();
+
+                  for (let i = 23; i >= 0; i--) {
+                      const hour = new Date(now.getTime() - (i * 60 * 60 * 1000));
+                      labels.push(hour.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
+                      data.push(btcPrice - (Math.random() * 1000 - 500));
+                  }
+
+                  priceChart.data.labels = labels;
+                  priceChart.data.datasets[0].data = data;
+                  priceChart.update();
+
+              } catch (error) {
+                  console.error('Error loading market data:', error);
+                  document.getElementById('btc-price').textContent = 'Error loading data';
+              }
+          }
+
+          async function loadAIRecommendations() {
+              try {
+                  // In a real implementation, this would call your trade_picker.py
+                  // For demo purposes, we'll use mock data
+                  const mockRecommendations = [
+                      { symbol: 'BTC-USD', name: 'Bitcoin', action: 'BUY', score: 82, target: 68500, stop: 67000 },
+                      { symbol: 'ETH-USD', name: 'Ethereum', action: 'HOLD', score: 55, target: 3500, stop: 3300 },
+                      { symbol: 'SOL-USD', name: 'Solana', action: 'STRONG BUY', score: 91, target: 210, stop: 195 }
+                  ];
+
+                  const container = document.getElementById('ai-recommendations');
+                  container.innerHTML = '';
+
+                  mockRecommendations.forEach(rec => {
+                      const card = document.createElement('div');
+                      card.className = `p-4 rounded-lg ${rec.action.toLowerCase().replace(' ', '-')}`;
+                      card.innerHTML = `
+                          <div class="flex justify-between items-center mb-2">
+                              <div>
+                                  <h4 class="font-bold">${rec.symbol}</h4>
+                                  <p class="text-sm text-gray-400">${rec.name}</p>
+                              </div>
+                              <span class="text-lg font-bold">${rec.action}</span>
+                          </div>
+                          <div class="flex justify-between text-sm">
+                              <span>Score: ${rec.score}/100</span>
+                              <span>Target: $${rec.target}</span>
+                          </div>
+                          <div class="w-full bg-gray-700 rounded-full h-1.5 mt-2">
+                              <div class="bg-blue-500 h-1.5 rounded-full" style="width: ${rec.score}%"></div>
+                          </div>
+                      `;
+                      container.appendChild(card);
+                  });
+
+              } catch (error) {
+                  console.error('Error loading AI recommendations:', error);
+                  document.getElementById('ai-recommendations').innerHTML = '<div class="text-center text-gray-400
+  py-4">Failed to load recommendations</div>';
+              }
+          }
+
+          function setupEventListeners() {
+              // Refresh button
+              document.getElementById('refresh-btn').addEventListener('click', function() {
+                  loadAccountData();
+                  loadMarketData();
+                  loadAIRecommendations();
+              });
+
+              // Trade asset selection
+              document.getElementById('trade-asset').addEventListener('change', updateOrderPreview);
+
+              // Trade amount input
+              document.getElementById('trade-amount').addEventListener('input', updateOrderPreview);
+
+              // Buy button
+              document.getElementById('buy-btn').addEventListener('click', function() {
+                  executeTrade('buy');
+              });
+
+              // Sell button
+              document.getElementById('sell-btn').addEventListener('click', function() {
+                  executeTrade('sell');
+              });
+          }
+
+          function updateOrderPreview() {
+              const asset = document.getElementById('trade-asset').value;
+              const amount = parseFloat(document.getElementById('trade-amount').value) || 0;
+
+              // Get current price (from market data or mock)
+              const price = parseFloat(document.getElementById('btc-price').textContent.replace('$', '')) || 68000;
+
+              document.getElementById('preview-asset').textContent = asset;
+              document.getElementById('preview-amount').textContent = amount.toFixed(8);
+              document.getElementById('preview-price').textContent = `$${price.toFixed(2)}`;
+              document.getElementById('preview-total').textContent = `$${(amount * price).toFixed(2)}`;
+          }
+
+          async function executeTrade(action) {
+              const asset = document.getElementById('trade-asset').value;
+              const amount = document.getElementById('trade-amount').value;
+
+              if (!amount || parseFloat(amount) <= 0) {
+                  alert('Please enter a valid amount');
+                  return;
+              }
+
+              try {
+                  // In a real implementation, this would call Coinbase's API
+                  // For demo purposes, we'll simulate the trade
+                  const price = parseFloat(document.getElementById('btc-price').textContent.replace('$', ''));
+                  const total = (parseFloat(amount) * price).toFixed(2);
+
+                  // Add to trade history
+                  const historyTable = document.getElementById('trade-history');
+                  const newRow = historyTable.insertRow(0);
+
+                  newRow.innerHTML = `
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">${new Date().toLocaleString()}</td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">${asset}</td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm ${action === 'buy' ? 'text-green-400' :
+  'text-red-400'}">${action.toUpperCase()}</td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">${amount}</td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">$${price.toFixed(2)}</td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-green-400">Completed</td>
+                  `;
+
+                  // Update account balance (simulated)
+                  const currentBalance = parseFloat(document.getElementById('account-balance').textContent.replace('$',
+  ''));
+                  const newBalance = action === 'buy' ? currentBalance - parseFloat(total) : currentBalance +
+  parseFloat(total);
+                  document.getElementById('account-balance').textContent = `$${newBalance.toFixed(2)}`;
+
+                  alert(`Trade executed: ${action.toUpperCase()} ${amount} ${asset} at $${price.toFixed(2)}`);
+
+              } catch (error) {
+                  console.error('Trade execution error:', error);
+                  alert('Trade execution failed. Please try again.');
+              }
+          }
+
+          // Helper function to generate Coinbase API signature
+          function generateSignature(method, path) {
+              // In a real implementation, you would generate a proper HMAC signature
+              // This is simplified for demonstration
+              return 'mock-signature';
+          }
+      </script>
+  </body>
+  </html>
