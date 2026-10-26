@@ -353,9 +353,19 @@
                       `;
                       container.appendChild(card);
                   });
-} catch (error) {
-    console.error('Error loading AI recommendations:', error);
-}
+async function loadAIRecommendations() {
+    try {
+        const response = await fetch('/api/recommendations');
+        const data = await response.json();
+        
+        // Loop through your data and append cards...
+        data.forEach(rec => {
+            // ... your card creation code ...
+            container.appendChild(card);
+        });
+    } catch (error) {
+        console.error('Error loading AI recommendations:', error);
+    }
                         function setupEventListeners() {
               // Refresh button
               document.getElementById('refresh-btn').addEventListener('click', function() {
