@@ -435,10 +435,8 @@ async function loadAIRecommendations() {
                   `;
 
                   // Update account balance (simulated)
-                  const currentBalance = parseFloat(document.getElementById('account-balance').textContent.replace('$',
-  '));
-                  const newBalance = action === 'buy' ? currentBalance - parseFloat(total) : currentBalance +
-  parseFloat(total);
+                  const currentBalance = parseFloat(document.getElementById('account-balance').textContent.replace('$','));
+                  const newBalance = action === 'buy' ? currentBalance - parseFloat(total) : currentBalance + parseFloat(total);
                   document.getElementById('account-balance').textContent = `$${newBalance.toFixed(2)}`;
 
                   alert(`Trade executed: ${action.toUpperCase()} ${amount} ${asset} at $${price.toFixed(2)}`);
