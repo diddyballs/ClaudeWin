@@ -353,14 +353,10 @@
                       `;
                       container.appendChild(card);
                   });
-
-              } catch (error) {
-                  console.error('Error loading AI recommendations:', error);
-                  document.getElementById('ai-recommendations').innerHTML = '<div class="text-center text-gray-400 py-4">Failed to load recommendations</div>';
-              }
-          }
-
-          function setupEventListeners() {
+} catch (error) {
+    console.error('Error loading AI recommendations:', error);
+}
+                        function setupEventListeners() {
               // Refresh button
               document.getElementById('refresh-btn').addEventListener('click', function() {
                   loadAccountData();
